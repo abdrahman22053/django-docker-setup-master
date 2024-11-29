@@ -1,0 +1,51 @@
+version: '3'
+
+
+volumes:
+  mysql_data:
+    driver: local
+
+
+services:
+  mysql:
+    image: mysql:8.0.32
+    ports:
+      - "33333:3306"
+    environment:
+      MYSQL_DATABASE: book
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysql -h localhost -uroot -proot -e 'SHOW DATABASES;'"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+  
+  backend:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    working_dir: /code
+    command: ["bash", "-c", "sleep 10 && python manage.py runserver 0.0.0.0:8000"]
+    volumes:
+      - .:/code
+    ports:
+     - "8000:8000"
+    environment:
+      - DB_NAME=book
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_HOST=mysql
+      - DB_PORT=3306
+    
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+
+      
+    
